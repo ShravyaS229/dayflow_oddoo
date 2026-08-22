@@ -202,6 +202,7 @@ function App() {
       : undefined;
 
     if (status === "Rejected" && !reviewComment?.trim()) {
+      setLeaveError("A rejection comment is required to reject a leave request.");
       return;
     }
 
