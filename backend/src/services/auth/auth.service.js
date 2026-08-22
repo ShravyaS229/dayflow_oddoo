@@ -3,10 +3,12 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
 import { env } from "../../config/env.js";
+import { sql } from "../../db/index.js";
 import {
   findUserByEmail,
   findUserById,
   createUser,
+  createEmployee,
   getRoleId,
   verifyUserEmail,
 } from "../../repositories/auth/user.repository.js";
@@ -66,13 +68,26 @@ export const signup = async ({
     Date.now() + 24 * 60 * 60 * 1000
   );
 
-  const user = await createUser({
-    email,
-    passwordHash,
-    roleId: role.id,
-    verificationToken,
-    verificationTokenExpiresAt,
-  });
+  const userId = crypto.randomUUID();
+  const [userRows] = await sql.transaction((transaction) => [
+    createUser({
+      userId,
+      email,
+      passwordHash,
+      roleId: role.id,
+      verificationToken,
+      verificationTokenExpiresAt,
+      db: transaction,
+    }),
+    createEmployee({
+      userId,
+      firstName,
+      lastName,
+      db: transaction,
+    }),
+  ]);
+
+  const user = userRows[0];
 
   return {
     user,

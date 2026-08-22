@@ -41,14 +41,17 @@ export const findUserById = async (id) => {
 };
 
 export const createUser = async ({
+  userId,
   email,
   passwordHash,
   roleId,
   verificationToken,
   verificationTokenExpiresAt,
+  db = sql,
 }) => {
-  const rows = await sql`
+  const rows = await db`
     INSERT INTO users (
+      id,
       email,
       password_hash,
       role_id,
@@ -56,6 +59,7 @@ export const createUser = async ({
       verification_token_expires_at
     )
     VALUES (
+      ${userId},
       ${email},
       ${passwordHash},
       ${roleId},
@@ -63,6 +67,29 @@ export const createUser = async ({
       ${verificationTokenExpiresAt}
     )
     RETURNING id, email, email_verified;
+  `;
+
+  return rows[0];
+};
+
+export const createEmployee = async ({
+  userId,
+  firstName,
+  lastName,
+  db = sql,
+}) => {
+  const rows = await db`
+    INSERT INTO employees (
+      user_id,
+      first_name,
+      last_name
+    )
+    VALUES (
+      ${userId},
+      ${firstName},
+      ${lastName || null}
+    )
+    RETURNING id, user_id, first_name, last_name;
   `;
 
   return rows[0];
