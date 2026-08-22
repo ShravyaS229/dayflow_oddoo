@@ -6,10 +6,23 @@ import leaveRoutes from "./routes/leave.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
+const allowedOrigins = new Set([
+  env.clientUrl,
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
+]);
 
 app.use(
   cors({
-    origin: env.clientUrl,
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
