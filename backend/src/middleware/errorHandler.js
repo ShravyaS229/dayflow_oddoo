@@ -1,8 +1,13 @@
-export const errorHandler = (err, req, res, next) => {
-  console.error(err);
+import { errorResponse } from "../utils/response.js";
 
-  res.status(err.statusCode || 500).json({
-    success: false,
-    message: err.message || "Internal server error",
-  });
+export const errorHandler = (error, req, res, next) => {
+  console.error(error);
+
+  const statusCode = error.statusCode || 500;
+
+  return errorResponse(
+    res,
+    error.message || "Internal server error",
+    statusCode
+  );
 };

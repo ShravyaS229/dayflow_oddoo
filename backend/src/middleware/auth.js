@@ -1,18 +1,16 @@
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
+import { unauthorized } from "../utils/errors.js";
 
 export const authenticate = (req, res, next) => {
   try {
-    const header = req.headers.authorization;
+    const authorization = req.headers.authorization;
 
-    if (!header || !header.startsWith("Bearer ")) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication required",
-      });
+    if (!authorization || !authorization.startsWith("Bearer ")) {
+      throw unauthorized("Authentication token required");
     }
 
-    const token = header.split(" ")[1];
+    const token = authorization.split(" ")[1];
 
     const decoded = jwt.verify(token, env.jwtSecret);
 
@@ -20,9 +18,14 @@ export const authenticate = (req, res, next) => {
 
     next();
   } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid or expired token",
-    });
+    if (error.name === "TokenExpiredError") {
+      return next(unauthorized("Token expired"));
+    }
+
+    if (error.name === "JsonWebTokenError") {
+      return next(unauthorized("Invalid token"));
+    }
+
+    next(error);
   }
 };
