@@ -65,6 +65,73 @@ const initializeDatabase = async () => {
       ON CONFLICT (name) DO NOTHING;
     `;
 
+    await sql`
+      DO $$
+      BEGIN
+        CREATE TYPE leave_type_enum AS ENUM ('paid', 'sick', 'unpaid');
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END
+      $$;
+    `;
+
+    await sql`
+      DO $$
+      BEGIN
+        CREATE TYPE leave_status_enum AS ENUM ('pending', 'approved', 'rejected');
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END
+      $$;
+    `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS leave_requests (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        employee_id UUID NOT NULL
+          REFERENCES employees(id)
+          ON DELETE RESTRICT,
+        leave_type leave_type_enum NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        remarks TEXT,
+        review_comment TEXT,
+        status leave_status_enum NOT NULL DEFAULT 'pending',
+        reviewed_by UUID
+          REFERENCES users(id)
+          ON DELETE RESTRICT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT leave_dates_valid
+          CHECK (end_date >= start_date),
+        CONSTRAINT rejected_leave_requires_review_comment
+          CHECK (
+            status <> 'rejected'
+            OR NULLIF(BTRIM(review_comment), '') IS NOT NULL
+          ),
+        CONSTRAINT reviewed_status_requires_reviewer
+          CHECK (
+            status = 'pending'
+            OR reviewed_by IS NOT NULL
+          )
+      );
+    `;
+
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_leave_requests_employee_id
+        ON leave_requests(employee_id);
+    `;
+
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_leave_requests_status
+        ON leave_requests(status);
+    `;
+
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_leave_requests_reviewed_by
+        ON leave_requests(reviewed_by);
+    `;
+
     console.log("Database initialized successfully.");
   } catch (error) {
     console.error("Database initialization failed:");
