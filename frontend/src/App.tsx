@@ -47,7 +47,14 @@ function App() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [activePage, setActivePage] = useState("dashboard");
 
-  const [leaveRequests] = useState<LeaveRequest[]>([
+  // Apply Leave form state
+  const [leaveType, setLeaveType] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [reason, setReason] = useState("");
+
+  // Leave requests
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([
     {
       id: 1,
       employee: "Srishti",
@@ -77,6 +84,7 @@ function App() {
     },
   ]);
 
+  // Dashboard counts
   const pendingCount = leaveRequests.filter(
     (leave) => leave.status === "Pending"
   ).length;
@@ -157,11 +165,70 @@ function App() {
     );
   }
 
+  // Approve / Reject leave
+  const updateLeaveStatus = (
+    id: number,
+    status: LeaveStatus
+  ) => {
+    setLeaveRequests((requests) =>
+      requests.map((leave) =>
+        leave.id === id
+          ? { ...leave, status }
+          : leave
+      )
+    );
+  };
+
+  // Submit new leave request
+  const handleLeaveSubmit = (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    if (!leaveType || !fromDate || !toDate || !reason.trim()) {
+      alert("Please fill in all fields.");
+      return;
+    }
+
+    if (toDate < fromDate) {
+      alert("To date cannot be before From date.");
+      return;
+    }
+
+    const newLeaveRequest: LeaveRequest = {
+      id: Date.now(),
+      employee: "Srishti",
+      leaveType,
+      from: fromDate,
+      to: toDate,
+      reason: reason.trim(),
+      status: "Pending",
+    };
+
+    setLeaveRequests((requests) => [
+      ...requests,
+      newLeaveRequest,
+    ]);
+
+    // Clear form
+    setLeaveType("");
+    setFromDate("");
+    setToDate("");
+    setReason("");
+
+    alert("Leave request submitted successfully!");
+
+    // Go to My Leaves
+    setActivePage("my-leaves");
+  };
+
   return (
     <div className="app">
+      {/* SIDEBAR */}
       <aside className="sidebar">
         <div className="logo">
           <div className="logo-box">D</div>
+
           <div>
             <h2>Dayflow</h2>
             <p>HRMS</p>
@@ -170,14 +237,22 @@ function App() {
 
         <nav>
           <button
-            className={activePage === "dashboard" ? "nav-item active" : "nav-item"}
+            className={
+              activePage === "dashboard"
+                ? "nav-item active"
+                : "nav-item"
+            }
             onClick={() => setActivePage("dashboard")}
           >
             Dashboard
           </button>
 
           <button
-            className={activePage === "my-leaves" ? "nav-item active" : "nav-item"}
+            className={
+              activePage === "my-leaves"
+                ? "nav-item active"
+                : "nav-item"
+            }
             onClick={() => setActivePage("my-leaves")}
           >
             My Leaves
@@ -185,7 +260,9 @@ function App() {
 
           <button
             className={
-              activePage === "approvals" ? "nav-item active" : "nav-item"
+              activePage === "approvals"
+                ? "nav-item active"
+                : "nav-item"
             }
             onClick={() => setActivePage("approvals")}
           >
@@ -194,7 +271,9 @@ function App() {
 
           <button
             className={
-              activePage === "apply-leave" ? "nav-item active" : "nav-item"
+              activePage === "apply-leave"
+                ? "nav-item active"
+                : "nav-item"
             }
             onClick={() => setActivePage("apply-leave")}
           >
@@ -209,11 +288,15 @@ function App() {
         </div>
       </aside>
 
+      {/* MAIN CONTENT */}
       <main className="main-content">
+        {/* TOP BAR */}
         <header className="topbar">
           <div>
             <h1>Leave & Approval</h1>
-            <p>Manage your leave requests and approvals.</p>
+            <p>
+              Manage your leave requests and approvals.
+            </p>
           </div>
 
           <div className="profile">
@@ -225,6 +308,7 @@ function App() {
           </div>
         </header>
 
+        {/* DASHBOARD */}
         {activePage === "dashboard" && (
           <>
             <section className="stats">
@@ -248,12 +332,16 @@ function App() {
               <div className="section-header">
                 <div>
                   <h2>Recent Leave Requests</h2>
-                  <p>Overview of submitted leave requests.</p>
+                  <p>
+                    Overview of submitted leave requests.
+                  </p>
                 </div>
 
                 <button
                   className="primary-btn"
-                  onClick={() => setActivePage("apply-leave")}
+                  onClick={() =>
+                    setActivePage("apply-leave")
+                  }
                 >
                   + Apply Leave
                 </button>
@@ -264,13 +352,25 @@ function App() {
           </>
         )}
 
+        {/* MY LEAVES */}
         {activePage === "my-leaves" && (
           <section className="content-card">
             <div className="section-header">
               <div>
                 <h2>My Leave Requests</h2>
-                <p>Track the status of your submitted requests.</p>
+                <p>
+                  Track the status of your submitted requests.
+                </p>
               </div>
+
+              <button
+                className="primary-btn"
+                onClick={() =>
+                  setActivePage("apply-leave")
+                }
+              >
+                + Apply Leave
+              </button>
             </div>
 
             <LeaveTable
@@ -281,61 +381,113 @@ function App() {
           </section>
         )}
 
+        {/* LEAVE APPROVALS */}
         {activePage === "approvals" && (
           <section className="content-card">
             <div className="section-header">
               <div>
                 <h2>Leave Approvals</h2>
-                <p>Review employee leave requests.</p>
+                <p>
+                  Review employee leave requests.
+                </p>
               </div>
             </div>
 
-            <LeaveTable requests={leaveRequests} showActions />
+            <LeaveTable
+              requests={leaveRequests}
+              showActions
+              onStatusChange={updateLeaveStatus}
+            />
           </section>
         )}
 
+        {/* APPLY LEAVE */}
         {activePage === "apply-leave" && (
           <section className="content-card form-card">
             <h2>Apply for Leave</h2>
-            <p>Submit a new leave request.</p>
 
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                alert("Leave request submitted successfully!");
-              }}
-            >
+            <p>
+              Submit a new leave request.
+            </p>
+
+            <form onSubmit={handleLeaveSubmit}>
+              {/* LEAVE TYPE */}
               <label>
                 Leave Type
-                <select required>
-                  <option value="">Select leave type</option>
-                  <option>Casual Leave</option>
-                  <option>Sick Leave</option>
-                  <option>Earned Leave</option>
+
+                <select
+                  value={leaveType}
+                  onChange={(event) =>
+                    setLeaveType(event.target.value)
+                  }
+                  required
+                >
+                  <option value="">
+                    Select leave type
+                  </option>
+
+                  <option value="Casual Leave">
+                    Casual Leave
+                  </option>
+
+                  <option value="Sick Leave">
+                    Sick Leave
+                  </option>
+
+                  <option value="Earned Leave">
+                    Earned Leave
+                  </option>
                 </select>
               </label>
 
+              {/* DATES */}
               <div className="form-row">
                 <label>
                   From
-                  <input type="date" required />
+
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(event) =>
+                      setFromDate(event.target.value)
+                    }
+                    required
+                  />
                 </label>
 
                 <label>
                   To
-                  <input type="date" required />
+
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(event) =>
+                      setToDate(event.target.value)
+                    }
+                    required
+                  />
                 </label>
               </div>
 
+              {/* REASON */}
               <label>
                 Reason
+
                 <textarea
+                  value={reason}
+                  onChange={(event) =>
+                    setReason(event.target.value)
+                  }
                   placeholder="Enter reason for leave..."
                   required
                 />
               </label>
 
-              <button type="submit" className="primary-btn">
+              {/* SUBMIT */}
+              <button
+                type="submit"
+                className="primary-btn"
+              >
                 Submit Leave Request
               </button>
             </form>
@@ -346,12 +498,19 @@ function App() {
   );
 }
 
+/* LEAVE TABLE */
+
 function LeaveTable({
   requests,
   showActions = false,
+  onStatusChange,
 }: {
   requests: LeaveRequest[];
   showActions?: boolean;
+  onStatusChange?: (
+    id: number,
+    status: LeaveStatus
+  ) => void;
 }) {
   return (
     <div className="table-container">
@@ -364,38 +523,80 @@ function LeaveTable({
             <th>To</th>
             <th>Reason</th>
             <th>Status</th>
+
             {showActions && <th>Action</th>}
           </tr>
         </thead>
 
         <tbody>
-          {requests.map((leave) => (
-            <tr key={leave.id}>
-              <td>{leave.employee}</td>
-              <td>{leave.leaveType}</td>
-              <td>{leave.from}</td>
-              <td>{leave.to}</td>
-              <td>{leave.reason}</td>
-              <td>
-                <span className={`status ${leave.status.toLowerCase()}`}>
-                  {leave.status}
-                </span>
+          {requests.length === 0 ? (
+            <tr>
+              <td
+                colSpan={showActions ? 7 : 6}
+                className="muted"
+              >
+                No leave requests found.
               </td>
-
-              {showActions && (
-                <td>
-                  {leave.status === "Pending" ? (
-                    <div className="actions">
-                      <button className="approve-btn">Approve</button>
-                      <button className="reject-btn">Reject</button>
-                    </div>
-                  ) : (
-                    <span className="muted">No action</span>
-                  )}
-                </td>
-              )}
             </tr>
-          ))}
+          ) : (
+            requests.map((leave) => (
+              <tr key={leave.id}>
+                <td>{leave.employee}</td>
+
+                <td>{leave.leaveType}</td>
+
+                <td>{leave.from}</td>
+
+                <td>{leave.to}</td>
+
+                <td>{leave.reason}</td>
+
+                <td>
+                  <span
+                    className={`status ${leave.status.toLowerCase()}`}
+                  >
+                    {leave.status}
+                  </span>
+                </td>
+
+                {showActions && (
+                  <td>
+                    {leave.status === "Pending" ? (
+                      <div className="actions">
+                        <button
+                          className="approve-btn"
+                          onClick={() =>
+                            onStatusChange?.(
+                              leave.id,
+                              "Approved"
+                            )
+                          }
+                        >
+                          Approve
+                        </button>
+
+                        <button
+                          className="reject-btn"
+                          onClick={() =>
+                            onStatusChange?.(
+                              leave.id,
+                              "Rejected"
+                            )
+                          }
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="muted">
+                        No action
+                      </span>
+                    )}
+                  </td>
+                )}
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
