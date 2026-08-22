@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import { env } from "./config/env.js";
+import authRoutes from "./routes/auth/auth.routes.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
 
@@ -19,5 +21,9 @@ app.get("/api/health", (req, res) => {
     message: "Dayflow API is running",
   });
 });
+
+app.use("/api/auth", authRoutes);
+
+app.use(errorHandler);
 
 export default app;
