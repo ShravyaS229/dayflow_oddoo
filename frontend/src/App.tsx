@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import "./App.css";
 
 const API_BASE_URL = "http://localhost:5000";
@@ -30,13 +30,48 @@ export const authenticatedFetch = (
 type LeaveStatus = "Pending" | "Approved" | "Rejected";
 
 type LeaveRequest = {
-  id: number;
+  id: string;
   employee: string;
   leaveType: string;
   from: string;
   to: string;
   reason: string;
   status: LeaveStatus;
+};
+
+const toDisplayLeave = (leave: {
+  id: string;
+  employee_email: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  remarks: string | null;
+  status: string;
+}): LeaveRequest => ({
+  id: leave.id,
+  employee: leave.employee_email,
+  leaveType: leave.leave_type,
+  from: leave.start_date,
+  to: leave.end_date,
+  reason: leave.remarks || "",
+  status: leave.status.charAt(0).toUpperCase() + leave.status.slice(1) as LeaveStatus,
+});
+
+const getApiError = (payload: { message?: string }) =>
+  payload.message || "The request could not be completed";
+
+const fetchLeaveRequests = async (token: string) => {
+  const response = await authenticatedFetch(
+    token,
+    `${API_BASE_URL}/api/leave`
+  );
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(getApiError(payload));
+  }
+
+  return payload.data.map(toDisplayLeave) as LeaveRequest[];
 };
 
 function App() {
@@ -54,35 +89,9 @@ function App() {
   const [reason, setReason] = useState("");
 
   // Leave requests
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([
-    {
-      id: 1,
-      employee: "Srishti",
-      leaveType: "Casual Leave",
-      from: "22 Aug 2026",
-      to: "23 Aug 2026",
-      reason: "Personal work",
-      status: "Pending",
-    },
-    {
-      id: 2,
-      employee: "Rahul",
-      leaveType: "Sick Leave",
-      from: "20 Aug 2026",
-      to: "20 Aug 2026",
-      reason: "Not feeling well",
-      status: "Approved",
-    },
-    {
-      id: 3,
-      employee: "Ananya",
-      leaveType: "Earned Leave",
-      from: "25 Aug 2026",
-      to: "27 Aug 2026",
-      reason: "Family function",
-      status: "Rejected",
-    },
-  ]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [leaveLoading, setLeaveLoading] = useState(false);
+  const [leaveError, setLeaveError] = useState("");
 
   // Dashboard counts
   const pendingCount = leaveRequests.filter(
@@ -126,6 +135,24 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    setLeaveLoading(true);
+    setLeaveError("");
+
+    fetchLeaveRequests(session.token)
+      .then(setLeaveRequests)
+      .catch((error) => {
+        setLeaveError(
+          error instanceof Error ? error.message : "Unable to load leave requests"
+        );
+      })
+      .finally(() => setLeaveLoading(false));
+  }, [session]);
+
   if (!session) {
     return (
       <main className="main-content">
@@ -166,21 +193,51 @@ function App() {
   }
 
   // Approve / Reject leave
-  const updateLeaveStatus = (
-    id: number,
+  const updateLeaveStatus = async (
+    id: string,
     status: LeaveStatus
   ) => {
-    setLeaveRequests((requests) =>
-      requests.map((leave) =>
-        leave.id === id
-          ? { ...leave, status }
-          : leave
-      )
-    );
+    const reviewComment = status === "Rejected"
+      ? window.prompt("Enter a rejection comment:")
+      : undefined;
+
+    if (status === "Rejected" && !reviewComment?.trim()) {
+      return;
+    }
+
+    setLeaveError("");
+
+    try {
+      const response = await authenticatedFetch(
+        session.token,
+        `${API_BASE_URL}/api/leave/${id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: status.toLowerCase(),
+            ...(reviewComment ? { review_comment: reviewComment } : {}),
+          }),
+        }
+      );
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(getApiError(payload));
+      }
+
+      setLeaveRequests(await fetchLeaveRequests(session.token));
+    } catch (error) {
+      setLeaveError(
+        error instanceof Error ? error.message : "Unable to update leave request"
+      );
+    }
   };
 
   // Submit new leave request
-  const handleLeaveSubmit = (
+  const handleLeaveSubmit = async (
     event: React.FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
@@ -195,31 +252,42 @@ function App() {
       return;
     }
 
-    const newLeaveRequest: LeaveRequest = {
-      id: Date.now(),
-      employee: "Srishti",
-      leaveType,
-      from: fromDate,
-      to: toDate,
-      reason: reason.trim(),
-      status: "Pending",
-    };
+    setLeaveError("");
 
-    setLeaveRequests((requests) => [
-      ...requests,
-      newLeaveRequest,
-    ]);
+    try {
+      const response = await authenticatedFetch(
+        session.token,
+        `${API_BASE_URL}/api/leave`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            leave_type: leaveType,
+            start_date: fromDate,
+            end_date: toDate,
+            remarks: reason.trim(),
+          }),
+        }
+      );
+      const payload = await response.json();
 
-    // Clear form
-    setLeaveType("");
-    setFromDate("");
-    setToDate("");
-    setReason("");
+      if (!response.ok) {
+        throw new Error(getApiError(payload));
+      }
 
-    alert("Leave request submitted successfully!");
-
-    // Go to My Leaves
-    setActivePage("my-leaves");
+      setLeaveRequests(await fetchLeaveRequests(session.token));
+      setLeaveType("");
+      setFromDate("");
+      setToDate("");
+      setReason("");
+      setActivePage("my-leaves");
+    } catch (error) {
+      setLeaveError(
+        error instanceof Error ? error.message : "Unable to submit leave request"
+      );
+    }
   };
 
   return (
@@ -308,6 +376,8 @@ function App() {
           </div>
         </header>
 
+        {leaveError && <p role="alert">{leaveError}</p>}
+
         {/* DASHBOARD */}
         {activePage === "dashboard" && (
           <>
@@ -347,7 +417,11 @@ function App() {
                 </button>
               </div>
 
-              <LeaveTable requests={leaveRequests} />
+              {leaveLoading ? (
+                <p>Loading leave requests...</p>
+              ) : (
+                <LeaveTable requests={leaveRequests} />
+              )}
             </section>
           </>
         )}
@@ -395,7 +469,7 @@ function App() {
 
             <LeaveTable
               requests={leaveRequests}
-              showActions
+              showActions={session.user.role === "HR" || session.user.role === "ADMIN"}
               onStatusChange={updateLeaveStatus}
             />
           </section>
@@ -426,15 +500,15 @@ function App() {
                     Select leave type
                   </option>
 
-                  <option value="Casual Leave">
+                  <option value="paid">
                     Casual Leave
                   </option>
 
-                  <option value="Sick Leave">
+                  <option value="sick">
                     Sick Leave
                   </option>
 
-                  <option value="Earned Leave">
+                  <option value="unpaid">
                     Earned Leave
                   </option>
                 </select>
@@ -508,7 +582,7 @@ function LeaveTable({
   requests: LeaveRequest[];
   showActions?: boolean;
   onStatusChange?: (
-    id: number,
+    id: string,
     status: LeaveStatus
   ) => void;
 }) {
