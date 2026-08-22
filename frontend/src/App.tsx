@@ -1,5 +1,31 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import "./App.css";
+
+const API_BASE_URL = "http://localhost:5000";
+
+type AuthUser = {
+  email: string;
+  role: string;
+};
+
+type AuthSession = {
+  token: string;
+  user: AuthUser;
+};
+
+export const authenticatedFetch = (
+  token: string,
+  input: RequestInfo | URL,
+  init: RequestInit = {}
+) => {
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${token}`);
+
+  return fetch(input, {
+    ...init,
+    headers,
+  });
+};
 
 type LeaveStatus = "Pending" | "Approved" | "Rejected";
 
@@ -14,6 +40,11 @@ type LeaveRequest = {
 };
 
 function App() {
+  const [session, setSession] = useState<AuthSession | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [activePage, setActivePage] = useState("dashboard");
 
   const [leaveRequests] = useState<LeaveRequest[]>([
@@ -57,6 +88,74 @@ function App() {
   const rejectedCount = leaveRequests.filter(
     (leave) => leave.status === "Rejected"
   ).length;
+
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoginError("");
+    setIsLoggingIn(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.message || "Login failed");
+      }
+
+      setSession(payload.data);
+    } catch (error) {
+      setLoginError(
+        error instanceof Error ? error.message : "Unable to connect to the server"
+      );
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  if (!session) {
+    return (
+      <main className="main-content">
+        <section className="content-card form-card">
+          <h1>Sign in to Dayflow</h1>
+          <p>Use your Dayflow account to continue.</p>
+
+          <form onSubmit={handleLogin}>
+            <label>
+              Email
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            </label>
+
+            <label>
+              Password
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+              />
+            </label>
+
+            {loginError && <p role="alert">{loginError}</p>}
+
+            <button type="submit" className="primary-btn" disabled={isLoggingIn}>
+              {isLoggingIn ? "Signing in..." : "Sign in"}
+            </button>
+          </form>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <div className="app">
@@ -105,8 +204,8 @@ function App() {
 
         <div className="sidebar-bottom">
           <p>Logged in as</p>
-          <strong>Srishti</strong>
-          <span>Employee</span>
+          <strong>{session.user.email}</strong>
+          <span>{session.user.role}</span>
         </div>
       </aside>
 
@@ -118,10 +217,10 @@ function App() {
           </div>
 
           <div className="profile">
-            <div className="avatar">S</div>
+            <div className="avatar">{session.user.email.charAt(0).toUpperCase()}</div>
             <div>
-              <strong>Srishti</strong>
-              <span>Employee</span>
+              <strong>{session.user.email}</strong>
+              <span>{session.user.role}</span>
             </div>
           </div>
         </header>
@@ -176,7 +275,7 @@ function App() {
 
             <LeaveTable
               requests={leaveRequests.filter(
-                (leave) => leave.employee === "Srishti"
+                (leave) => leave.employee === session.user.email
               )}
             />
           </section>
