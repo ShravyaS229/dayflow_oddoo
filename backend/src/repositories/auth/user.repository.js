@@ -40,7 +40,7 @@ export const findUserById = async (id) => {
   return rows[0] || null;
 };
 
-export const createUser = async ({
+export const createUser = ({
   userId,
   email,
   passwordHash,
@@ -49,7 +49,7 @@ export const createUser = async ({
   verificationTokenExpiresAt,
   db = sql,
 }) => {
-  const rows = await db`
+  return db`
     INSERT INTO users (
       id,
       email,
@@ -69,16 +69,15 @@ export const createUser = async ({
     RETURNING id, email, email_verified;
   `;
 
-  return rows[0];
 };
 
-export const createEmployee = async ({
+export const createEmployee = ({
   userId,
   firstName,
   lastName,
   db = sql,
 }) => {
-  const rows = await db`
+  return db`
     INSERT INTO employees (
       user_id,
       first_name,
@@ -92,7 +91,6 @@ export const createEmployee = async ({
     RETURNING id, user_id, first_name, last_name;
   `;
 
-  return rows[0];
 };
 
 export const getRoleId = async (roleName) => {
