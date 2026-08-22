@@ -1,0 +1,185 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f7fb;
+  color: #1f2937;
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 230px;
+  background: #111827;
+  color: white;
+  padding: 28px 18px;
+}
+
+.sidebar h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.sidebar p {
+  color: #9ca3af;
+}
+
+.sidebar nav {
+  margin-top: 40px;
+}
+
+.sidebar nav div {
+  padding: 13px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  color: #d1d5db;
+}
+
+.sidebar nav .active {
+  background: #2563eb;
+  color: white;
+}
+
+.main {
+  flex: 1;
+  padding: 30px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.header h2 {
+  margin-bottom: 5px;
+  font-size: 28px;
+}
+
+.header p,
+.panel p {
+  color: #6b7280;
+}
+
+button {
+  border: none;
+  background: #2563eb;
+  color: white;
+  padding: 11px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.card,
+.panel {
+  background: white;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.card span,
+.card small {
+  color: #6b7280;
+}
+
+.card h3 {
+  font-size: 25px;
+  margin: 12px 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.chart {
+  height: 220px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  padding: 20px;
+}
+
+.chart div {
+  width: 45px;
+  min-height: 40px;
+  background: #2563eb;
+  border-radius: 6px 6px 0 0;
+  position: relative;
+}
+
+.chart span {
+  position: absolute;
+  top: 100%;
+  margin-top: 8px;
+  left: 10px;
+  font-size: 12px;
+}
+
+.summary p {
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th,
+td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+th {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+td small {
+  display: block;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+  .cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    width: 180px;
+  }
+}
