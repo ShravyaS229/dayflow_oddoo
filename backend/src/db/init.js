@@ -5,6 +5,10 @@ const initializeDatabase = async () => {
     console.log("Connecting to Neon PostgreSQL...");
 
     await sql`
+      CREATE EXTENSION IF NOT EXISTS pgcrypto;
+    `;
+
+    await sql`
       CREATE TABLE IF NOT EXISTS roles (
         id SERIAL PRIMARY KEY,
         name VARCHAR(50) UNIQUE NOT NULL
@@ -18,9 +22,21 @@ const initializeDatabase = async () => {
         password_hash TEXT NOT NULL,
         role_id INTEGER NOT NULL REFERENCES roles(id),
         email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+        verification_token TEXT,
+        verification_token_expires_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+    `;
+
+    await sql`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS verification_token TEXT;
+    `;
+
+    await sql`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS verification_token_expires_at TIMESTAMPTZ;
     `;
 
     await sql`
