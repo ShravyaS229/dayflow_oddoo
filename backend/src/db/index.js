@@ -1,13 +1,10 @@
-import pg from "pg";
+import { Pool } from "@neondatabase/serverless";
 import { env } from "../config/env.js";
-
-const { Pool } = pg;
 
 export const pool = new Pool({
   connectionString: env.databaseUrl,
-  ssl: {
-    rejectUnauthorized: false,
-  },
 });
 
-export const query = (text, params) => pool.query(text, params);
+export const query = (text, params) => {
+  return pool.query(text, params);
+};
