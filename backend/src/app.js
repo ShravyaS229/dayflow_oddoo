@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { env } from "./config/env.js";
 import authRoutes from "./routes/auth/auth.routes.js";
+import leaveRoutes from "./routes/leave.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -23,6 +24,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/leave", leaveRoutes);
 
 app.use(errorHandler);
 
